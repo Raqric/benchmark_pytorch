@@ -55,13 +55,11 @@ def batched_dot_bmm(a, b):
     return torch.bmm(a, b).flatten(-3)
 
 # Method that do the benchmark and compare results with dot mul sum implementations and vectorSum
-def benchMark(sizes,nThreads):
+def benchMark(sizes):
     results = []
     if(len(sizes) == 0):
         print("Parameter 'sizes' has to a have minumun of 1 parameters")
         return
-    if(len(nThreads)==0):
-        print("Parameter 'nThreads' has to a have minumun of 1 parameters")
     
     for n in sizes:
         # label and sub_label are the rows
@@ -69,21 +67,20 @@ def benchMark(sizes,nThreads):
         label = 'Batched dot'
         sub_label = f'[{n}, {n}]'
         x = torch.ones((n, n))
-        for num_threads in nThreads:
-            results.append(benchmark.Timer(
+        results.append(benchmark.Timer(
                 stmt='batched_dot_mul_sum(x, x)',
                 setup='from __main__ import batched_dot_mul_sum',
                 globals={'x': x},
-                num_threads=num_threads,
+                num_threads=torch.get_num_threads(),
                 label=label,
                 sub_label=sub_label,
                 description='mul/sum',
             ).blocked_autorange())
-            results.append(benchmark.Timer(
+        results.append(benchmark.Timer(
                 stmt='batched_dot_bmm(x, x)',
                 setup='from __main__ import batched_dot_bmm',
                 globals={'x': x},
-                num_threads=num_threads,
+                num_threads=torch.get_num_threads(),
                 label=label,
                 sub_label=sub_label,
                 description='bmm',
@@ -97,12 +94,11 @@ def benchMark(sizes,nThreads):
 
 #The limit dimension of the sizes is with matrix of 16384x16384. It is running out of memory with that sizes
 sizes = [512,1024,2048,4096,8192,16384,32768]
-thread = torch.get_num_threads() #In FT we can just send one by one, we cannot set with pytorch numThreads
 
 #The benchmark execute 5 times to gather data and afterwards 
-#for i in range(0,5):
-#    print("Benchmark execution: ",i+1, "\n")
-#    benchMark(sizes,threads)
+for i in range(0,5):
+    print("Benchmark execution: ",i+1, "\n")
+    benchMark(sizes)
 
 def ownBenchmark(sizes,writerCSV,operation,thread):        
     for i in range(0,5):
